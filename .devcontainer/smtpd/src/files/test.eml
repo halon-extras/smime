@@ -1,0 +1,18 @@
+MIME-Version: 1.0
+Message-ID: <b604dde3-12fb-11f1-b164-2bf370ae4941@se1-gles-sth1.inumbo.com>
+Date: Thu, 26 Feb 2026 11:12:52 +0100
+From: <sender@example.org>
+To: <recipient@example.com>
+Subject: Hello World
+Content-Type: multipart/alternative;
+ boundary="b604e38c-12fb-11f1-b164-2bf370ae4941"
+
+--b604e38c-12fb-11f1-b164-2bf370ae4941
+Content-Type: text/plain; charset=utf-8
+
+*Hello World*
+--b604e38c-12fb-11f1-b164-2bf370ae4941
+Content-Type: text/html; charset=utf-8
+
+<strong>Hello World</strong>
+--b604e38c-12fb-11f1-b164-2bf370ae4941--

@@ -1,6 +1,6 @@
 # S/MIME
 
-S/MIME (PKCS7) sign a message.
+HSL functions to S/MIME sign/verify and S/MIME encrypt/decrypt mail messages.
 
 ## Installation
 
@@ -22,31 +22,139 @@ yum install halon-extras-smime
 
 These functions needs to be [imported](https://docs.halon.io/hsl/structures.html#import) from the `extras://smime` module path.
 
-### smime_sign($mail, $pki[, $opts])
+### smime_sign(mail, pki [, options])
 
-S/MIME (PKCS7) sign mail message.
+CMS sign (S/MIME) a mail message.
 
 **Params**
 
-- mail `MailMessage` - The mail message
-- pki `array|string` - An array with a "x509" (X509Resource) certificate, "privatekey" (PrivateKey) and "chain" (array of X509Resource) or an PKI id as string
-- opts `array` - An options array
+- mail `MailMessage` - The mail message to sign (**Required**)
+- pki `array|string` - If given as an associative array it should include a x509 (X509Resource), privatekey (*PrivateKeyResource) and optionally a chain (array) of X509Resources. If given as a string it should either be an id or a PEM encoded string with a x509 certificate, a chain and a privatekey. (**Required**)
+- options `array` - An options array
 
-The following options are available in the options array
+The following options are available in the **options** array.
 
- - "id" if a pki given as a string should be enterered as an id or a PEM certificate. The default is true.
- - "crlf" convert all bare LF to CRLF. The default is true (this costs a little bit performance).
+- id `boolean` - If pki argument is given as an string, use this to indicate a id of a certificate in the configuration. The default is `true`.
+- deatched `boolean` - If the signature should be detached (not include the message itself). The default is `true`.
 
 **Return**
 
-Boolean true if the message was successfully signed
+An associative array with a ``result`` (boolean) whether the mail message was successfully signed.
 
-**Example**
+### smime_sign_encrypt(mail, pki_sign, pki_encrypt [, options])
+
+CMS sign and encrypt (S/MIME) a mail message.
+
+**Params**
+
+- mail `MailMessage` - The mail message to sign (**Required**)
+- pki_sign `array|string` - If given as an associative array it should include a x509 (X509Resource), privatekey (*PrivateKeyResource) and optionally a chain (array) of X509Resources. If given as a string it should either be an id or a PEM encoded string with a x509 certificate, a chain and a privatekey. (**Required**)
+- pki_encrypt `array` - Should be given as an associative array and must include an array of certs (X509Resource). (**Required**)
+- options `array` - An options array
+
+The following options are available in the **options** array.
+
+- id `boolean` - If pki_sign argument is given as an string, use this to indicate a id of a certificate in the configuration. The default is `true`.
+
+**Return**
+
+An associative array with a ``result`` (boolean) whether the mail message was successfully signed and encrypted.
+
+### smime_encrypt(mail, pki)
+
+CMS encrypt (S/MIME) a mail message.
+
+**Params**
+
+- mail `MailMessage` - The mail message to sign (**Required**)
+- pki `array` - Should be given as an associative array and must include an array of certs (X509Resource). (**Required**)
+
+**Return**
+
+An associative array with a ``result`` (boolean) whether the mail message was successfully encrypted.
+
+### smime_verify(mail, pki [, options])
+
+CMS verify (S/MIME) a mail message.
+
+**Params**
+
+- mail `MailMessage` - The mail message to sign (**Required**)
+- pki `array` - Should be given as an associative array and must include an array of certs (X509Resource) and/or an array of store (X509Resource). (**Required**)
+- options `array` - An options array
+
+The following options are available in the **options** array.
+
+- data `boolean` - If the signature data should be return. The default is `true`.
+
+**Return**
+
+An associative array with a ``result`` (boolean), and if the mail message was successfully verified as list of ``signers`` (X509Resources).
+
+### smime_decrypt(mail, pki_decrypt, [, pki_verify [, options]])
+
+CMS decrypt (S/MIME) a mail message.
+
+**Params**
+
+- mail `MailMessage` - The mail message to sign (**Required**)
+- pki_decrypt `array|string` - If given as an associative array it should include a x509 (X509Resource), privatekey (*PrivateKeyResource). If given as a string it should either be an id or a PEM encoded string with a x509 certificate and a privatekey. (**Required**)
+- pki_verify `array` - Should be given as an associative array and must include an array of certs (X509Resource) and/or an array of store (X509Resource). (**Required**)
+
+- options `array` - An options array
+
+The following options are available in the **options** array.
+
+- id `boolean` - If pki_decrypt argument is given as an string, use this to indicate a id of a certificate in the configuration. The default is `true`.
+
+**Return**
+
+An associative array with a ``result`` (boolean) whether the mail message was successfully decrypted.
+
+### smime_is_signed(mail)
+
+Check if a MIME message is signed using S/MIME.
+
+**Params**
+
+- mail `MailMessage` - The mail message to check (**Required**)
+
+**Returns**
+
+A boolean `true` if the message is signed using S/MIME.
+
+### smime_is_encrypted(mail)
+
+Check if a MIME message is encrypted using S/MIME.
+
+**Params**
+
+- mail `MailMessage` - The mail message to check (**Required**)
+
+**Returns**
+
+A boolean `true` if the message is encrypted using S/MIME.
+
+## Examples
 
 ```
-import { smime_sign } from "extras://smime";
-import $crt from "file://sample.crt" with ["resource" => true];
-import $key from "file://sample.key";
+import $cert from "test.crt" with ["resource" => true];
+import $key from "test.key";
+import { smime_is_signed, smime_sign, smime_verify, smime_is_encrypted, smime_encrypt, smime_decrypt } from "extras://smime";
 
-smime_sign($mail, ["x509" => $crt[0], "privatekey" => $key, "chain" => $crt[1:]]);
+// Sign or verify
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => false]);
+// smime_verify($mail, ["store" => [$cert[0]]]);
+
+// Encrypt or decrypt
+smime_encrypt($mail, ["certs" => [$cert[0]]]);
+// smime_decrypt($mail, ["x509" => $cert[0], "privatekey" => $key]);
+
+// Sign or verify (Detatched)
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => true]);
+// smime_verify($mail, ["store" => [$cert[0]]]);
+
+// Signed or encrypted
+smime_is_signed($mail);
+smime_is_encrypted($mail);
 ```

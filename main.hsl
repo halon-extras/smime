@@ -1,1 +1,1 @@
-import { smime_sign } from "./smime.hsl";
+import { smime_is_signed, smime_sign, smime_sign_encrypt, smime_is_encrypted, smime_encrypt, smime_verify, smime_decrypt } from "./smime.hsl";

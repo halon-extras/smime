@@ -1,0 +1,121 @@
+import $mime from "txt!test.eml";
+import $cert from "test.crt" with ["resource" => true];
+import $key from "test.key";
+import { smime_is_signed, smime_sign, smime_is_encrypted, smime_encrypt, smime_verify, smime_decrypt, smime_sign_encrypt } from "file://smime.hsl";
+
+// Test 1 (Sign + Verify)
+$mail = MailMessage::String($mime);
+$expect = $mail->getBody();
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => false]);
+$signed = MailMessage::String($mail->toString());
+smime_verify($signed, ["store" => [$cert[0]]]);
+$verified = MailMessage::String($signed->toString());
+$result = $verified->getBody();
+if ($expect !== $result)
+    throw Exception("Test 1 (Sign + Verify): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 1 (Sign + Verify):\t\t\tOK";
+
+// Test 2 (Encrypt + Decrypt)
+$mail = MailMessage::String($mime);
+$expect = $mail->getBody();
+smime_encrypt($mail, ["certs" => [$cert[0]]]);
+$encrypted = MailMessage::String($mail->toString());
+smime_decrypt($encrypted, ["x509" => $cert[0], "privatekey" => $key]);
+$decrypted = MailMessage::String($encrypted->toString());
+$result = $decrypted->getBody();
+if ($expect !== $result)
+    throw Exception("Test 2 (Encrypt + Decrypt): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 2 (Encrypt + Decrypt):\t\tOK";
+
+// Test 3 (Sign + Verify) - detached
+$mail = MailMessage::String($mime);
+$expect = $mail->getBody();
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => true]);
+$signed = MailMessage::String($mail->toString());
+if (smime_verify($signed, ["store" => [$cert[0]]])["result"] != true)
+    throw Exception("Test 3 (Sign + Verify) - detached: FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 3 (Sign + Verify) - detached:\tOK";
+
+// Test 4 (Encrypt + Decrypt) - detached
+$mail = MailMessage::String($mime);
+$expect = $mail->getBody();
+smime_encrypt($mail, ["certs" => [$cert[0]]]);
+$encrypted = MailMessage::String($mail->toString());
+smime_decrypt($encrypted, ["x509" => $cert[0], "privatekey" => $key]);
+$decrypted = MailMessage::String($encrypted->toString());
+$result = $decrypted->getBody();
+if ($expect !== $result)
+    throw Exception("Test 4 (Encrypt + Decrypt) - detached: FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 4 (Encrypt + Decrypt) - detached:\tOK";
+
+// Test 5 (Is signed)
+$mail = MailMessage::String($mime);
+$expect = true;
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => false]);
+$signed = MailMessage::String($mail->toString());
+$result = smime_is_signed($signed);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 5 (Is signed): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 5 (Is signed):\t\t\tOK";
+
+// Test 6 (Is encrypted)
+$mail = MailMessage::String($mime);
+$expect = true;
+smime_encrypt($mail, ["certs" => [$cert[0]]]);
+$encrypted = MailMessage::String($mail->toString());
+$result = smime_is_encrypted($encrypted);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 6 (Is encrypted): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 6 (Is encrypted):\t\t\tOK";
+
+// Test 7 (Is signed) - detached
+$mail = MailMessage::String($mime);
+$expect = true;
+smime_sign($mail, ["x509" => $cert[0], "privatekey" => $key], ["detached" => true]);
+$signed = MailMessage::String($mail->toString());
+$result = smime_is_signed($signed);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 7 (Is signed) - detached: FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 7 (Is signed) - detached:\t\tOK";
+
+// Test 8 (Is not signed)
+$mail = MailMessage::String($mime);
+$expect = false;
+$result = smime_is_signed($mail);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 8 (Is not signed): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 8 (Is not signed):\t\t\tOK";
+
+// Test 9 (Is not encrypted)
+$mail = MailMessage::String($mime);
+$expect = false;
+$result = smime_is_encrypted($mail);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 9 (Is not encrypted): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 9 (Is not encrypted):\t\tOK";
+
+// Test 10 (Sign + Encrypt)
+$mail = MailMessage::String($mime);
+$expect = ["result"=>true,"signers"=>[0=>''-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0ENTUC+I8o7W67pmErEl
+PP+l/eCkMQkO44O9FIl1lmwlLnvAugT1cgNCYrh4dK0nYb9JML3sbEwFXUXPyan8
+Ydx+rOnL1EFypUD5/DkhEwJpwUJw/4kfdtxXcfzkjY+jI1YrLsv9Mgf6pLAiiZZi
+c9bFp8SlvMtVcXSHGfNz7kqHJAZPe7ghcnBkYwYL6EQ/F+AohPUHW5T4ioO5/dRJ
+PJDJL8eZxzx6bfOyhu7mAcSav1SadFWfUQCjLBmPh5vIKZ+8UplMNN5AI8fFxC9F
+OeCexSywAiGqBTSiT23OSIKxtFrR4Oq9eoI/WmzAX7KNeZcZflnKEGAbDVT00I+D
+6lrUEu9WFxaPZ83ZJFVQy3xXnO5ykq1SysmwF2EQA66XayG/LchCvryk61nfwyE0
+kPxRaJjoC+X6h7eX4r6LQd+0DRE3pHunub8KPe7yYgYHyAbaV4XCbLImpXYM7+UM
+RdRx2IRyhgx3HU/ornpzaXc0Mm0BkGU8RJMo8QcwqO4uBopWMCTWQ2WTXDOYbMDO
+BNUyGxv1+EwLzBEZFZeBfQ0OrHaASYPljePbdKxpHPF/NRC5ehFWRKBNRnOZKfwZ
+Ep5UrMnapINUEXIjW7RZ9Eg/94LMUEfi8ujXOMKUVvzK5UuwLRaf1rKbWl9g8Q58
+qXso4y6Ik6I1AIA3+yyKWvkCAwEAAQ==
+-----END PUBLIC KEY-----
+'']];
+smime_sign_encrypt($mail, ["x509" => $cert[0], "privatekey" => $key], ["certs" => [$cert[0]]]);
+$encrypted = MailMessage::String($mail->toString());
+$result = smime_decrypt($encrypted, ["x509" => $cert[0], "privatekey" => $key], ["store" => [$cert[0]]]);
+if ($result["signers"])
+    $result["signers"] = array_map(function ($signer) { return X509($signer)->public_key(["pem" => true]); }, $result["signers"]);
+if (json_encode($result) !== json_encode($expect))
+    throw Exception("Test 10 (Sign + Encrypt): FAILED\nRESULT($result)\nEXPECT($expect)");
+echo "Test 10 (Sign + Encrypt):\t\tOK";

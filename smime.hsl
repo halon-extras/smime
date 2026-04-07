@@ -2,7 +2,7 @@ function smime_sign($mail, $pki, $opts = [])
 {
 	$headersadded = [];
 	$headers = array_join(array_reduce(function($x, $y) closure ($headersadded, $mail) {
-		if ($y == "mime-version" or $y[0:8] == "content-")
+		if ($y[0:8] == "content-")
 			return [...$x, $mail->getHeader($y, [
 						"field" => true,
 						"index" => $headersadded[$y] !== none ? ++$headersadded[$y] : $headersadded[$y] = 0
@@ -11,18 +11,210 @@ function smime_sign($mail, $pki, $opts = [])
 	}, $mail->getHeaderNames(), []));
 	$body = $mail->getBody(["decode" => false]);
 	if ($body === none)
-		return false;
+		return ["result" => false];
 
-	if ($opts["crlf"] ?? true)
-		$data = pcre_replace(#/(?<!\r)\n/, "\r\n", $headers."\r\n".$body);
+	$data = $headers."\r\n".$body;
+
+	if ($opts["detached"] ?? true)
+	{
+		$s = MIME();
+		$s->addHeader("Content-Type", ''application/pkcs7-signature; name="smime.p7s"'');
+		$s->addHeader("Content-Transfer-Encoding", "base64");
+		$s->addHeader("Content-Disposition", ''attachment; filename="smime.p7s"'');
+		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => true]);
+		if (!$result["result"])
+			return ["result" => false];
+		$s->setBody($result["data"]);
+		$mail->appendPart($s, ["type" => ''multipart/signed; protocol="application/pkcs7-signature"; micalg="sha-256"'']);
+	}
 	else
+	{
+		$mail->delHeader("Content-Type");
+		$mail->delHeader("Content-Transfer-Encoding");
+		$mail->delHeader("Content-Disposition");
+		$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=signed-data; name="smime.p7m"'');
+		$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => false]);
+		if (!$result["result"])
+			return ["result" => false];
+		$mail->setBody($result["data"], ["encoding" => "base64"]);
+	}
+	return ["result" => true];
+}
+
+function smime_sign_encrypt($mail, $pki_sign, $pki_encrypt, $opts = [])
+{
+	$headersadded = [];
+	$headers = array_join(array_reduce(function($x, $y) closure ($headersadded, $mail) {
+		if ($y[0:8] == "content-")
+			return [...$x, $mail->getHeader($y, [
+						"field" => true,
+						"index" => $headersadded[$y] !== none ? ++$headersadded[$y] : $headersadded[$y] = 0
+					])];
+		return $x;
+	}, $mail->getHeaderNames(), []));
+	$body = $mail->getBody(["decode" => false]);
+	if ($body === none)
+		return ["result" => false];
+
+	$data = $headers."\r\n".$body;
+
+	$mail->delHeader("Content-Type");
+	$mail->delHeader("Content-Transfer-Encoding");
+	$mail->delHeader("Content-Disposition");
+	$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'');
+	$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+	$result = cms_sign($data, $pki_sign, ["id" => $opts["id"] ?? true, "detached" => false]);
+	if (!$result["result"])
+		return ["result" => false];
+	$result = cms_encrypt($result["data"], $pki_encrypt, []);
+	if (!$result["result"])
+		return ["result" => false];
+	$mail->setBody($result["data"], ["encoding" => "base64"]);
+	return ["result" => true];
+}
+
+function smime_encrypt($mail, $pki)
+{
+	$headersadded = [];
+	$headers = array_join(array_reduce(function($x, $y) closure ($headersadded, $mail) {
+		if ($y[0:8] == "content-")
+			return [...$x, $mail->getHeader($y, [
+						"field" => true,
+						"index" => $headersadded[$y] !== none ? ++$headersadded[$y] : $headersadded[$y] = 0
+					])];
+		return $x;
+	}, $mail->getHeaderNames(), []));
+	$body = $mail->getBody(["decode" => false]);
+	if ($body === none)
+		return ["result" => false];
+
+	$data = $headers."\r\n".$body;
+
+	$mail->delHeader("Content-Type");
+	$mail->delHeader("Content-Transfer-Encoding");
+	$mail->delHeader("Content-Disposition");
+	$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'');
+	$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+	$result = cms_encrypt($data, $pki);
+	if (!$result["result"])
+		return ["result" => false];
+	$mail->setBody($result["data"], ["encoding" => "base64"]);
+	return ["result" => true];
+}
+
+function smime_is_signed($mail)
+{
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
+		$mail->getTypeParameter("smime-type") == "signed-data")
+		return true;
+	if ($mail->getType() == "multipart/signed") {
+		if (length($mail->getParts()) != 2)
+			return false;
+
+		$signature = array_find(function ($part) {
+			return $part->getType() == "application/pkcs7-signature" or $part->getType() == "application/x-pkcs7-signature";
+		}, $mail->getParts());
+
+		if ($signature)
+			return true;
+	}
+	return false;
+}
+
+function smime_verify($mail, $pki, $opts = [])
+{
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
+		$mail->getTypeParameter("smime-type") == "signed-data")
+	{
+		$result = cms_verify($mail->getBody(), none, $pki, ["detached" => false, "data" => true]);
+		if (!$result["result"])
+			return ["result" => false];
+		/* fix */
+		$part = MailMessage::String($result["data"]);
+		foreach ($part->getHeaderNames() as $n) /* are we allowed to take all? */
+			if ($v = $part->getHeader($n))
+				$mail->setHeader($n, $v);
+		$mail->delHeader("Content-Type");
+		$mail->delHeader("Content-Transfer-Encoding");
+		$mail->delHeader("Content-Disposition");
+		$encoding = $part->getHeader("Content-Transfer-Encoding") ?: "7bit";
+		$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
+		return ["result" => true, "signers" => $result["signers"]];
+	}
+	if ($mail->getType() == "multipart/signed")
+	{
+		if (length($mail->getParts()) != 2)
+			return ["result" => false];
+
+		$signature = array_find(function ($part) {
+			return $part->getType() == "application/pkcs7-signature" or $part->getType() == "application/x-pkcs7-signature";
+		}, $mail->getParts());
+		if (!$signature)
+			return ["result" => false];
+
+		$body = array_find(function ($part) closure ($signature) {
+			return $part->getID() != $signature->getID();
+		}, $mail->getParts());
+
+		$headersadded = [];
+		$headers = array_join(array_reduce(function($x, $y) closure ($headersadded, $body) {
+			return [...$x, $body->getHeader($y, [
+						"field" => true,
+						"index" => $headersadded[$y] !== none ? ++$headersadded[$y] : $headersadded[$y] = 0
+					])];
+		}, $body->getHeaderNames(), []));
+
+		$body = $body->getBody(["decode" => false]);
+		if ($body === none)
+			return ["result" => false];
+
 		$data = $headers."\r\n".$body;
 
-	$s = MIME();
-	$s->addHeader("Content-Type", ''application/pkcs7-signature; name="smime.p7s"'');
-	$s->addHeader("Content-Transfer-Encoding", "base64");
-	$s->addHeader("Content-Disposition", ''attachment; filename="smime.p7s"'');
-	$s->setBody(pkcs7_sign($data, $pki, ["id" => $opts["id"] ?? true]));
-	$mail->appendPart($s, ["type" => ''multipart/signed; protocol="application/pkcs7-signature"; micalg="sha-256"'']);
-	return true;
+		$result = cms_verify($signature->getBody(), $data, $pki, ["data" => $opts["data"] ?? false]);
+		if (!$result["result"])
+			return ["result" => false];
+
+		return ["result" => true, "signers" => $result["signers"]];
+	}
+	return ["result" => false];
+}
+
+function smime_is_encrypted($mail)
+{
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
+		$mail->getTypeParameter("smime-type") == "enveloped-data")
+		return true;
+	return false;
+}
+
+function smime_decrypt($mail, $pki_decrypt, $pki_verify = none, $opts = [])
+{
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
+		$mail->getTypeParameter("smime-type") == "enveloped-data")
+	{
+		$result = cms_decrypt($mail->getBody(), $pki_decrypt, ["id" => $opts["id"] ?? true]);
+		if (!$result["result"])
+			return ["result" => false];
+		if ($result["cms"] == "signed" and $pki_verify !== none) {
+			$result = cms_verify($result["data"], "", $pki_verify, ["detached" => false, "data" => true]);
+			if (!$result["result"])
+				return ["result" => false];
+		}
+		$part = MailMessage::String($result["data"]);
+		/* xxx: are we allowed to copy all headers or just content? */
+		foreach ($part->getHeaderNames() as $n)
+			if ($v = $part->getHeader($n))
+				$mail->setHeader($n, $v);
+		$mail->delHeader("Content-Type");
+		$mail->delHeader("Content-Transfer-Encoding");
+		$mail->delHeader("Content-Disposition");
+		$encoding = $part->getHeader("Content-Transfer-Encoding") ?: "7bit";
+		$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
+		$response = ["result" => true];
+		if ($result["signers"])
+			$response["signers"] = $result["signers"];
+		return $response;
+	}
+	return ["result" => false];
 }
