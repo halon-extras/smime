@@ -17,4 +17,4 @@ environment:
   uuid:
     version: 4
 scripting:
-  rootpath: /workspaces/smime2
+  rootpath: /workspaces/smime

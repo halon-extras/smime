@@ -1,5 +1,5 @@
 {
-  "name": "smime2",
+  "name": "smime",
   "context": "..",
   "dockerFile": "./Dockerfile",
   "overrideCommand": false,
