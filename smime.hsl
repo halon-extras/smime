@@ -110,9 +110,16 @@ function smime_encrypt($mail, $pki, $opts = [])
 
 function smime_is_signed($mail)
 {
-	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
-		$mail->getTypeParameter("smime-type") == "signed-data")
-		return true;
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime"))
+	{
+		$type = $mail->getTypeParameter("smime-type");
+		if ($type == "signed-data")
+			return true;
+		if ($type != none)
+			return false;
+		if (cms_type($mail->getBody()) == "pkcs7-signedData")
+			return true;
+	}
 	if ($mail->getType() == "multipart/signed") {
 		if (length($mail->getParts()) != 2)
 			return false;
@@ -129,8 +136,7 @@ function smime_is_signed($mail)
 
 function smime_verify($mail, $pki, $opts = [])
 {
-	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
-		$mail->getTypeParameter("smime-type") == "signed-data")
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime"))
 	{
 		$result = cms_verify($mail->getBody(), none, $pki, ["detached" => false, "data" => true]);
 		if (!$result["result"])
@@ -187,16 +193,22 @@ function smime_verify($mail, $pki, $opts = [])
 
 function smime_is_encrypted($mail)
 {
-	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
-		$mail->getTypeParameter("smime-type") == "enveloped-data")
-		return true;
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime"))
+	{
+		$type = $mail->getTypeParameter("smime-type");
+		if ($type == "enveloped-data")
+			return true;
+		if ($type != none)
+			return false;
+		if (cms_type($mail->getBody()) == "pkcs7-envelopedData")
+			return true;
+	}
 	return false;
 }
 
 function smime_decrypt($mail, $pki_decrypt, $pki_verify = none, $opts = [])
 {
-	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime") and
-		$mail->getTypeParameter("smime-type") == "enveloped-data")
+	if (($mail->getType() == "application/pkcs7-mime" or $mail->getType() == "application/x-pkcs7-mime"))
 	{
 		$result = cms_decrypt($mail->getBody(), $pki_decrypt, ["id" => $opts["id"] ?? true]);
 		if (!$result["result"])
