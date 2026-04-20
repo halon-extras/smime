@@ -21,7 +21,7 @@ function smime_sign($mail, $pki, $opts = [])
 		$s->addHeader("Content-Type", ''application/pkcs7-signature; name="smime.p7s"'');
 		$s->addHeader("Content-Transfer-Encoding", "base64");
 		$s->addHeader("Content-Disposition", ''attachment; filename="smime.p7s"'');
-		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => true]);
+		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => true, "digest" => "sha256"]);
 		if (!$result["result"])
 			return ["result" => false];
 		$s->setBody($result["data"]);
@@ -34,7 +34,7 @@ function smime_sign($mail, $pki, $opts = [])
 		$mail->delHeader("Content-Disposition");
 		$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=signed-data; name="smime.p7m"'');
 		$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
-		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => false]);
+		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => false, "digest" => "sha256"]);
 		if (!$result["result"])
 			return ["result" => false];
 		$mail->setBody($result["data"], ["encoding" => "base64"]);
@@ -74,7 +74,7 @@ function smime_sign_encrypt($mail, $pki_sign, $pki_encrypt, $opts = [])
 	return ["result" => true];
 }
 
-function smime_encrypt($mail, $pki)
+function smime_encrypt($mail, $pki, $opts = [])
 {
 	$headersadded = [];
 	$headers = array_join(array_reduce(function($x, $y) closure ($headersadded, $mail) {
@@ -85,9 +85,14 @@ function smime_encrypt($mail, $pki)
 					])];
 		return $x;
 	}, $mail->getHeaderNames(), []));
+	if (!$headers)
+		$headers = "Content-Type: text/plain\r\n";
+
 	$body = $mail->getBody(["decode" => false]);
 	if ($body === none)
 		return ["result" => false];
+	if ($body[-1:] != "\n")
+		$body .= "\r\n";
 
 	$data = $headers."\r\n".$body;
 
@@ -96,7 +101,7 @@ function smime_encrypt($mail, $pki)
 	$mail->delHeader("Content-Disposition");
 	$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'');
 	$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
-	$result = cms_encrypt($data, $pki);
+	$result = cms_encrypt($data, $pki, $opts);
 	if (!$result["result"])
 		return ["result" => false];
 	$mail->setBody($result["data"], ["encoding" => "base64"]);
