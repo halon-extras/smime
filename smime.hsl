@@ -34,6 +34,7 @@ function smime_sign($mail, $pki, $opts = [])
 		$mail->delHeader("Content-Disposition");
 		$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=signed-data; name="smime.p7m"'');
 		$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+		$mail->addHeader("Content-Transfer-Encoding", ''base64'');
 		$result = cms_sign($data, $pki, ["id" => $opts["id"] ?? true, "detached" => false, "digest" => "sha256"]);
 		if (!$result["result"])
 			return ["result" => false];
@@ -64,6 +65,7 @@ function smime_sign_encrypt($mail, $pki_sign, $pki_encrypt, $opts = [])
 	$mail->delHeader("Content-Disposition");
 	$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'');
 	$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+	$mail->addHeader("Content-Transfer-Encoding", ''base64'');
 	$result = cms_sign($data, $pki_sign, ["id" => $opts["id"] ?? true, "detached" => false]);
 	if (!$result["result"])
 		return ["result" => false];
@@ -101,6 +103,7 @@ function smime_encrypt($mail, $pki, $opts = [])
 	$mail->delHeader("Content-Disposition");
 	$mail->addHeader("Content-Type", ''application/pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"'');
 	$mail->addHeader("Content-Disposition", ''attachment; filename="smime.p7m"'');
+	$mail->addHeader("Content-Transfer-Encoding", ''base64'');
 	$result = cms_encrypt($data, $pki, $opts);
 	if (!$result["result"])
 		return ["result" => false];
