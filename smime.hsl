@@ -227,7 +227,7 @@ function smime_decrypt($mail, $pki_decrypt, $pki_verify = none, $opts = [])
 		$mail->delHeader("Content-Transfer-Encoding");
 		$mail->delHeader("Content-Disposition");
 		$encoding = $part->getHeader("Content-Transfer-Encoding") ?: "7bit";
-		$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
+		$mail->setBody($part->getBody(["decode" => true]), ["encoding" => $encoding]);
 		$response = ["result" => true];
 		if ($result["signers"])
 			$response["signers"] = $result["signers"];
