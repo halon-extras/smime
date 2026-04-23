@@ -144,11 +144,11 @@ function smime_verify($mail, $pki, $opts = [])
 		$result = cms_verify($mail->getBody(), none, $pki, ["detached" => false, "data" => true]);
 		if (!$result["result"])
 			return ["result" => false];
-		/* fix */
 		$part = MailMessage::String($result["data"]);
-		foreach ($part->getHeaderNames() as $n) /* are we allowed to take all? */
-			if ($v = $part->getHeader($n))
-				$mail->setHeader($n, $v);
+		foreach ($part->getHeaderNames() as $n)
+			if ($n[0:8] == "content-" or $n == "mime-version")
+				if ($v = $part->getHeader($n))
+					$mail->setHeader($n, $v);
 		$mail->delHeader("Content-Type");
 		$mail->delHeader("Content-Transfer-Encoding");
 		$mail->delHeader("Content-Disposition");
@@ -225,10 +225,10 @@ function smime_decrypt($mail, $pki_decrypt, $pki_verify = none, $opts = [])
 				return ["result" => false];
 		}
 		$part = MailMessage::String($result["data"]);
-		/* xxx: are we allowed to copy all headers or just content? */
 		foreach ($part->getHeaderNames() as $n)
-			if ($v = $part->getHeader($n))
-				$mail->setHeader($n, $v);
+			if ($n[0:8] == "content-" or $n == "mime-version")
+				if ($v = $part->getHeader($n))
+					$mail->setHeader($n, $v);
 		$mail->delHeader("Content-Type");
 		$mail->delHeader("Content-Transfer-Encoding");
 		$mail->delHeader("Content-Disposition");
