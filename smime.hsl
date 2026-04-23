@@ -189,6 +189,9 @@ function smime_verify($mail, $pki, $opts = [])
 		if (!$result["result"])
 			return ["result" => false];
 
+		if ($opts["strip_signature"] ?? true)
+			$signature->remove();
+
 		return ["result" => true, "signers" => $result["signers"]];
 	}
 	return ["result" => false];
