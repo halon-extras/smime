@@ -86,7 +86,7 @@ CMS verify (S/MIME) a mail message.
 The following options are available in the **options** array.
 
 - data `boolean` - If the signature data should be return. The default is `true`.
-- strip_signature `boolean` - If for a detached signature the signature should be removed. The default is `true`.
+- strip_signature `boolean` - If the signature should be removed (altering the message). The default is `true`.
 
 **Return**
 

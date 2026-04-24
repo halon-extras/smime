@@ -144,16 +144,22 @@ function smime_verify($mail, $pki, $opts = [])
 		$result = cms_verify($mail->getBody(), none, $pki, ["detached" => false, "data" => true]);
 		if (!$result["result"])
 			return ["result" => false];
-		$part = MailMessage::String($result["data"]);
-		foreach ($part->getHeaderNames() as $n)
-			if ($n[0:8] == "content-" or $n == "mime-version")
-				if ($v = $part->getHeader($n))
-					$mail->setHeader($n, $v);
-		$mail->delHeader("Content-Type");
-		$mail->delHeader("Content-Transfer-Encoding");
-		$mail->delHeader("Content-Disposition");
-		$encoding = $part->getHeader("Content-Transfer-Encoding") ?: "7bit";
-		$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
+
+		if ($opts["strip_signature"] ?? true)
+		{
+			$part = MailMessage::String($result["data"]);
+			foreach ($part->getHeaderNames() as $n)
+				if ($n[0:8] == "content-" or $n == "mime-version")
+					if ($v = $part->getHeader($n))
+						$mail->setHeader($n, $v);
+
+			$mail->delHeader("Content-Type");
+			$mail->delHeader("Content-Transfer-Encoding");
+			$mail->delHeader("Content-Disposition");
+			$encoding = $part->getHeader("Content-Transfer-Encoding") ?: "7bit";
+			$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
+		}
+
 		return ["result" => true, "signers" => $result["signers"]];
 	}
 	if ($mail->getType() == "multipart/signed")
