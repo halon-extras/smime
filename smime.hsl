@@ -160,7 +160,7 @@ function smime_verify($mail, $pki, $opts = [])
 			$mail->setBody($part->getBody(["decode" => false]), ["encoding" => $encoding]);
 		}
 
-		return ["result" => true, "signers" => $result["signers"]];
+		return ["result" => true, "signers" => $result["signers"], "certs" => $result["certs"]];
 	}
 	if ($mail->getType() == "multipart/signed")
 	{
@@ -198,7 +198,7 @@ function smime_verify($mail, $pki, $opts = [])
 		if ($opts["strip_signature"] ?? true)
 			$signature->remove();
 
-		return ["result" => true, "signers" => $result["signers"]];
+		return ["result" => true, "signers" => $result["signers"], "certs" => $result["certs"]];
 	}
 	return ["result" => false];
 }
@@ -243,6 +243,8 @@ function smime_decrypt($mail, $pki_decrypt, $pki_verify = none, $opts = [])
 		$response = ["result" => true];
 		if ($result["signers"])
 			$response["signers"] = $result["signers"];
+		if ($result["certs"])
+			$response["certs"] = $result["certs"];
 		return $response;
 	}
 	return ["result" => false];

@@ -90,7 +90,7 @@ The following options are available in the **options** array.
 
 **Return**
 
-An associative array with a ``result`` (boolean), and if the mail message was successfully verified as list of ``signers`` (X509Resources).
+An associative array with a ``result`` (boolean), and if the mail message was successfully verified as list of ``signers`` (X509Resources) and a list of ``certs`` (X509Resources).
 
 ### smime_decrypt(mail, pki_decrypt, [, pki_verify [, options]])
 
