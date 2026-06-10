@@ -47,7 +47,7 @@ CMS sign and encrypt (S/MIME) a mail message.
 
 **Params**
 
-- mail `MailMessage` - The mail message to sign (**Required**)
+- mail `MailMessage` - The mail message to sign and encrypt (**Required**)
 - pki_sign `array|string` - If given as an associative array it should include a x509 (X509Resource), privatekey (*PrivateKeyResource) and optionally a chain (array) of X509Resources. If given as a string it should either be an id or a PEM encoded string with a x509 certificate, a chain and a privatekey. (**Required**)
 - pki_encrypt `array` - Should be given as an associative array and must include an array of certs (X509Resource). (**Required**)
 - options `array` - An options array
@@ -66,7 +66,7 @@ CMS encrypt (S/MIME) a mail message.
 
 **Params**
 
-- mail `MailMessage` - The mail message to sign (**Required**)
+- mail `MailMessage` - The mail message to encrypt (**Required**)
 - pki `array` - Should be given as an associative array and must include an array of certs (X509Resource). (**Required**)
 
 **Return**
@@ -79,7 +79,7 @@ CMS verify (S/MIME) a mail message.
 
 **Params**
 
-- mail `MailMessage` - The mail message to sign (**Required**)
+- mail `MailMessage` - The mail message to verify (**Required**)
 - pki `array` - Should be given as an associative array and must include an array of certs (X509Resource) and/or an array of store (X509Resource). (**Required**)
 - options `array` - An options array
 
@@ -98,7 +98,7 @@ CMS decrypt (S/MIME) a mail message.
 
 **Params**
 
-- mail `MailMessage` - The mail message to sign (**Required**)
+- mail `MailMessage` - The mail message to decrypt (**Required**)
 - pki_decrypt `array|string` - If given as an associative array it should include a x509 (X509Resource), privatekey (*PrivateKeyResource). If given as a string it should either be an id or a PEM encoded string with a x509 certificate and a privatekey. (**Required**)
 - pki_verify `array` - Should be given as an associative array and must include an array of certs (X509Resource) and/or an array of store (X509Resource). (**Required**)
 
